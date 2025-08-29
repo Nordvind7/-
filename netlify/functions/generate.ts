@@ -74,20 +74,20 @@ export const handler: Handler = async (event) => {
         const personImagePart = { inlineData: personImage };
         const clothingImagePart = { inlineData: clothingImage };
 
-        const prompt = `You are an expert virtual stylist AI. Your task is to perform a high-fidelity virtual try-on of a clothing item onto a person.
+        const prompt = `You are an expert virtual stylist AI. Your task is to perform a high-fidelity virtual try-on, replacing the person's current outfit with a new one.
 
 **INPUT:**
-- Image 1: A photo of a person.
+- Image 1: A photo of a person wearing an article of clothing.
 - Image 2: A photo of a single clothing item.
 
 **INSTRUCTIONS:**
-1.  **Analyze Person:** Identify the person's pose, body shape, and lighting in Image 1.
-2.  **Isolate Clothing:** Precisely isolate the clothing item from Image 2, ignoring any background or mannequins.
-3.  **Virtual Try-On:** Realistically place and drape the clothing item from Image 2 onto the person in Image 1.
-    - The clothing must conform to the person's body contours, pose, and posture naturally.
-    - Create realistic wrinkles, folds, and shadows on the clothing that are consistent with the person's pose and the lighting from Image 1.
-4.  **Preserve Identity & Background:** CRITICAL - The person's original head, face, hair, skin tone, and any visible body parts not covered by the new clothing MUST remain completely unchanged from Image 1. The background from Image 1 must also be fully preserved.
-5.  **Seamless Integration:** Ensure the final image is photorealistic and seamless. The lighting on the new clothing should match the ambient lighting of Image 1.
+1.  **Analyze Person:** Identify the person's pose, body shape, and the lighting in Image 1.
+2.  **Isolate New Clothing:** Precisely isolate the clothing item from Image 2, ignoring any background or mannequins.
+3.  **Replace and Fit:** You MUST COMPLETELY REMOVE the primary clothing item (e.g., shirt, jacket, dress) the person is currently wearing in Image 1. Then, realistically place and drape the new clothing item from Image 2 onto the person.
+    - The new clothing must conform to the person's body contours, pose, and posture naturally.
+    - Create realistic wrinkles, folds, and shadows on the new clothing that are consistent with the person's pose and the lighting from Image 1.
+4.  **Preserve Identity & Background:** CRITICAL - The person's original head, face, hair, skin tone, and any visible body parts (like hands or legs) not covered by the new clothing MUST remain completely unchanged from Image 1. The background from Image 1 must also be fully preserved.
+5.  **Seamless Integration:** Ensure the final image is photorealistic and seamless. The lighting on the new clothing should match the ambient lighting of Image 1 perfectly.
 
 **OUTPUT:**
 - Return ONLY the final, edited image. Do not include any text, explanations, or additional content in your response.`;
@@ -102,8 +102,6 @@ export const handler: Handler = async (event) => {
             },
         });
         
-        console.log("Gemini API Response:", JSON.stringify(response, null, 2));
-
         const result = handleApiResponse(response);
 
         return {
@@ -114,7 +112,7 @@ export const handler: Handler = async (event) => {
 
     } catch (error) {
         console.error("Error in Netlify function:", JSON.stringify(error, null, 2));
-        const errorMessage = error instanceof Error ? error.message : "Произошла неизвестная ошибка на сервере.";
+        let errorMessage = error instanceof Error ? error.message : "Произошла неизвестная ошибка на сервере.";
         
         if (errorMessage.includes("API key not valid")) {
              return {
@@ -122,6 +120,11 @@ export const handler: Handler = async (event) => {
                 body: JSON.stringify({ error: "API-ключ недействителен. Пожалуйста, проверьте ключ в переменных окружения Netlify." }),
             };
         }
+        
+        if (errorMessage.includes("did not match the expected pattern")) {
+            errorMessage = "Произошла ошибка при обработке одного из изображений. Пожалуйста, попробуйте использовать другое фото с хорошим освещением и четким фокусом, где объект хорошо виден.";
+        }
+
         return {
             statusCode: 500,
             body: JSON.stringify({ error: errorMessage }),

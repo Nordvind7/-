@@ -46,7 +46,7 @@ export const generateVirtualTryOn = async (
             clothingImagePart = await fileToGenerativePart(file);
         } catch (e) {
             console.error("Ошибка при загрузке изображения из галереи:", e);
-            throw new Error("Не удалось загрузить выбранный образ. Проверьте ссылку или попробуйте другой.");
+            throw new Error("Не удалось загрузить изображение из галереи. Возможно, оно временно недоступно. Пожалуйста, попробуйте другой образ или загрузите свое фото одежды.");
         }
     } else {
         clothingImagePart = await fileToGenerativePart(clothingSource);
