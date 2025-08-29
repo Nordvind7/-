@@ -22,22 +22,36 @@ const fileToGenerativePart = async (file: File): Promise<{ mimeType: string; dat
     return { mimeType, data };
 };
 
-
 /**
- * Sends images to a serverless function to generate a virtual try-on image.
+ * Sends images to the Netlify serverless function to generate a virtual try-on image.
  * @param personImage The image file of the person.
- * @param clothingImage The image file of the clothing.
+ * @param clothingSource The image file or URL of the clothing.
  * @returns A promise that resolves to the data URL of the combined image.
  */
 export const generateVirtualTryOn = async (
     personImage: File,
-    clothingImage: File,
+    clothingSource: File | string,
 ): Promise<string> => {
-    console.log('Подготовка изображений для отправки на серверную функцию...');
     const personImagePart = await fileToGenerativePart(personImage);
-    const clothingImagePart = await fileToGenerativePart(clothingImage);
 
-    console.log('Отправка запроса на Netlify Function...');
+    let clothingImagePart;
+    if (typeof clothingSource === 'string') {
+        try {
+            const response = await fetch(clothingSource);
+            if (!response.ok) {
+                throw new Error(`Не удалось загрузить изображение по URL: ${response.statusText}`);
+            }
+            const blob = await response.blob();
+            const file = new File([blob], "outfit.jpg", { type: blob.type });
+            clothingImagePart = await fileToGenerativePart(file);
+        } catch (e) {
+            console.error("Ошибка при загрузке изображения из галереи:", e);
+            throw new Error("Не удалось загрузить выбранный образ. Проверьте ссылку или попробуйте другой.");
+        }
+    } else {
+        clothingImagePart = await fileToGenerativePart(clothingSource);
+    }
+
     const response = await fetch('/.netlify/functions/generate', {
         method: 'POST',
         headers: {
@@ -49,20 +63,15 @@ export const generateVirtualTryOn = async (
         }),
     });
 
+    const result = await response.json();
+
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ 
-            error: `Сервер вернул ошибку ${response.status}. Пожалуйста, проверьте консоль серверной функции в Netlify.` 
-        }));
-        
-        const error = new Error(errorData.error || 'Произошла неизвестная ошибка на сервере.');
-        // Attach the error code if it exists, so the UI can react to it.
-        if (errorData.errorCode) {
-            (error as any).code = errorData.errorCode;
-        }
-        throw error;
+        throw new Error(result.error || 'Произошла ошибка на сервере.');
     }
 
-    const result = await response.json();
-    console.log('Получен успешный ответ от серверной функции.');
-    return `data:${result.mimeType};base64,${result.data}`;
+    if (result.mimeType && result.data) {
+        return `data:${result.mimeType};base64,${result.data}`;
+    } else {
+        throw new Error('Сервер вернул некорректный ответ.');
+    }
 };

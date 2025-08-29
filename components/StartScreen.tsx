@@ -28,12 +28,12 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFileSelect }) => {
         onFileSelect(e.dataTransfer.files);
       }}
     >
-      <div className="flex flex-col items-center gap-6 animate-fade-in">
-        <h1 className="text-5xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100 sm:text-6xl md:text-7xl">
-          Виртуальная <span className="text-blue-500 dark:text-blue-400">примерочная</span> на базе ИИ.
+      <div className="flex flex-col items-center gap-6 animate-fade-in-up">
+        <h1 className="text-5xl font-extrabold tracking-tight text-gray-100 sm:text-6xl md:text-7xl">
+          Добро пожаловать в <span className="text-blue-400">Style AI</span>
         </h1>
-        <p className="max-w-2xl text-lg text-gray-600 dark:text-gray-400 md:text-xl">
-          Посмотрите, как одежда сидит на вас. Загрузите своё фото, а затем фото одежды, чтобы начать.
+        <p className="max-w-2xl text-lg text-gray-400 md:text-xl">
+          Создайте свой идеальный образ с помощью искусственного интеллекта. Загрузите ваше фото, чтобы начать.
         </p>
 
         <div className="mt-6 flex flex-col items-center gap-4">

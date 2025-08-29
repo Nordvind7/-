@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
-import ThemeSwitcher from './ThemeSwitcher';
 
 const SparkleIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -11,22 +10,16 @@ const SparkleIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-interface HeaderProps {
-    theme: 'light' | 'dark';
-    setTheme: (theme: 'light' | 'dark') => void;
-}
-
-const Header: React.FC<HeaderProps> = ({ theme, setTheme }) => {
+const Header: React.FC = () => {
   return (
-    <header className="w-full py-4 px-8 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/30 backdrop-blur-sm sticky top-0 z-50">
+    <header className="w-full py-4 px-8 border-b border-gray-700 bg-gray-800/30 backdrop-blur-sm sticky top-0 z-50">
       <div className="flex items-center justify-between">
           <div className="flex items-center justify-center gap-3">
-              <SparkleIcon className="w-6 h-6 text-blue-500 dark:text-blue-400" />
-              <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-                Виртуальная примерочная
+              <SparkleIcon className="w-6 h-6 text-blue-400" />
+              <h1 className="text-xl font-bold tracking-tight text-gray-100">
+                Style AI
               </h1>
           </div>
-          <ThemeSwitcher theme={theme} setTheme={setTheme} />
       </div>
     </header>
   );

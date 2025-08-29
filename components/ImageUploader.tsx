@@ -11,9 +11,10 @@ interface ImageUploaderProps {
   onFileSelect: (file: File) => void;
   imageUrl: string | null;
   disabled?: boolean;
+  helpText?: string;
 }
 
-const ImageUploader: React.FC<ImageUploaderProps> = ({ title, onFileSelect, imageUrl, disabled }) => {
+const ImageUploader: React.FC<ImageUploaderProps> = ({ title, onFileSelect, imageUrl, disabled, helpText }) => {
     const [isDraggingOver, setIsDraggingOver] = useState(false);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,6 +62,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ title, onFileSelect, imag
                 )}
                  {!disabled && <input id={inputId} type="file" className="hidden" accept="image/*" onChange={handleFileChange} />}
             </div>
+            {helpText && <p className="text-sm text-center text-gray-500 dark:text-gray-400 mt-2 max-w-sm">{helpText}</p>}
         </div>
     );
 };
