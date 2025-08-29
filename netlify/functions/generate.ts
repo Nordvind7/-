@@ -8,34 +8,34 @@ import type { Handler } from '@netlify/functions';
 
 // This function is defined outside the handler to be reusable.
 const handleApiResponse = (
-    response: GenerateContentResponse,
-    context: string
+    response: GenerateContentResponse
 ): { mimeType: string, data: string } => {
+    // Check for explicit blocking by safety filters or other reasons.
     if (response.promptFeedback?.blockReason) {
         const { blockReason, blockReasonMessage } = response.promptFeedback;
         throw new Error(`Запрос заблокирован. Причина: ${blockReason}. ${blockReasonMessage || ''}`);
     }
 
-    const imagePartFromResponse = response.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
+    // Find the first part in the response that contains image data.
+    const imagePart = response.candidates?.[0]?.content?.parts?.find(part => part.inlineData)?.inlineData;
 
-    if (imagePartFromResponse?.inlineData) {
-        // Fix: Ensure mimeType exists, as it's optional in the type definition.
-        const { data, mimeType } = imagePartFromResponse.inlineData;
-        if (mimeType) {
-            return { data, mimeType };
-        }
+    // If an image part is found, return its data and MIME type.
+    if (imagePart?.data && imagePart?.mimeType) {
+        return { data: imagePart.data, mimeType: imagePart.mimeType };
     }
-
+    
+    // If no image is returned, check for other reasons for termination.
     const finishReason = response.candidates?.[0]?.finishReason;
     if (finishReason && finishReason !== 'STOP') {
         throw new Error(`Генерация изображения прервалась. Причина: ${finishReason}.`);
     }
     
+    // If no image and no clear error, construct a helpful message, including any text response.
     const textFeedback = response.text?.trim();
-    const errorMessage = `Модель ИИ не вернула изображение для '${context}'. ` +
+    const errorMessage = "Модель ИИ не вернула изображение. " +
         (textFeedback 
-            ? `Модель ответила текстом: "${textFeedback}"`
-            : "Это может произойти из-за фильтров безопасности.");
+            ? `Вместо этого она ответила текстом: "${textFeedback}"`
+            : "Это может быть связано с внутренними фильтрами безопасности или сложностью запроса.");
 
     throw new Error(errorMessage);
 };
@@ -48,7 +48,7 @@ export const handler: Handler = async (event) => {
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
         console.error("API_KEY is not set in Netlify environment variables.");
-        const errorMessage = "Ошибка конфигурации сервера: переменная окружения API_KEY не найдена. Убедитесь, что в настройках вашего сайта на Netlify (в разделе 'Site configuration' -> 'Environment variables') вы добавили переменную с именем ровно 'API_KEY' и вашим ключом в качестве значения.";
+        const errorMessage = "Ошибка конфигурации сервера: переменная окружения API_KEY не найдена. Убедитесь, что в настройках вашего сайта на Netlify (в разделе 'Site configuration' -> 'Environment variables') вы добавили переменную с именем ровно 'API_KEY' и вашим ключом в качестве значения, а затем заново развернули сайт (re-deploy).";
         return {
             statusCode: 500,
             body: JSON.stringify({ 
@@ -74,15 +74,23 @@ export const handler: Handler = async (event) => {
         const personImagePart = { inlineData: personImage };
         const clothingImagePart = { inlineData: clothingImage };
 
-        const prompt = `Вы — экспертный AI-стилист. Ваша задача — взять одежду со второго изображения и реалистично «надеть» её на человека с первого изображения.
+        const prompt = `You are an expert virtual stylist AI. Your task is to perform a high-fidelity virtual try-on of a clothing item onto a person.
 
-Инструкции:
-1.  **Определите человека** на первом изображении и его позу.
-2.  **Определите основной предмет(ы) одежды** на втором изображении.
-3.  **Совместите их**: Наденьте одежду на человека. Одежда должна адаптироваться к форме тела, осанке и позе человека. Она должна выглядеть естественно, с реалистичными складками, тенями и морщинами.
-4.  **Сохраните исходного человека**: Голова, руки, волосы, тон кожи и любые видимые части тела человека, не покрытые новой одеждой, должны остаться без изменений, как на первом изображении.
-5.  **Сохраните фон**: Фон с первого изображения должен быть сохранён в точности.
-6.  **Результат**: Верните ТОЛЬКО итоговое, совмещённое изображение. Не добавляйте в свой ответ никакого текста.`;
+**INPUT:**
+- Image 1: A photo of a person.
+- Image 2: A photo of a single clothing item.
+
+**INSTRUCTIONS:**
+1.  **Analyze Person:** Identify the person's pose, body shape, and lighting in Image 1.
+2.  **Isolate Clothing:** Precisely isolate the clothing item from Image 2, ignoring any background or mannequins.
+3.  **Virtual Try-On:** Realistically place and drape the clothing item from Image 2 onto the person in Image 1.
+    - The clothing must conform to the person's body contours, pose, and posture naturally.
+    - Create realistic wrinkles, folds, and shadows on the clothing that are consistent with the person's pose and the lighting from Image 1.
+4.  **Preserve Identity & Background:** CRITICAL - The person's original head, face, hair, skin tone, and any visible body parts not covered by the new clothing MUST remain completely unchanged from Image 1. The background from Image 1 must also be fully preserved.
+5.  **Seamless Integration:** Ensure the final image is photorealistic and seamless. The lighting on the new clothing should match the ambient lighting of Image 1.
+
+**OUTPUT:**
+- Return ONLY the final, edited image. Do not include any text, explanations, or additional content in your response.`;
         
         const textPart = { text: prompt };
 
@@ -93,8 +101,10 @@ export const handler: Handler = async (event) => {
                 responseModalities: [Modality.IMAGE, Modality.TEXT],
             },
         });
+        
+        console.log("Gemini API Response:", JSON.stringify(response, null, 2));
 
-        const result = handleApiResponse(response, 'виртуальная примерка');
+        const result = handleApiResponse(response);
 
         return {
             statusCode: 200,
@@ -103,10 +113,18 @@ export const handler: Handler = async (event) => {
         };
 
     } catch (error) {
-        console.error("Error in Netlify function:", error);
+        console.error("Error in Netlify function:", JSON.stringify(error, null, 2));
+        const errorMessage = error instanceof Error ? error.message : "Произошла неизвестная ошибка на сервере.";
+        
+        if (errorMessage.includes("API key not valid")) {
+             return {
+                statusCode: 401,
+                body: JSON.stringify({ error: "API-ключ недействителен. Пожалуйста, проверьте ключ в переменных окружения Netlify." }),
+            };
+        }
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: error instanceof Error ? error.message : "Произошла неизвестная ошибка на сервере." }),
+            body: JSON.stringify({ error: errorMessage }),
         };
     }
 };

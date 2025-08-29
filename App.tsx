@@ -118,10 +118,19 @@ const App: React.FC = () => {
       setResultImage(result);
       setStep('result');
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Произошла неизвестная ошибка.';
-      setError(`Не удалось сгенерировать изображение. ${errorMessage}`);
-      setStep('error');
-      console.error(err);
+        let displayError = "Произошла неизвестная ошибка.";
+        if (err instanceof Error) {
+            try {
+                // Netlify function often stringifies its JSON error response.
+                const parsedError = JSON.parse(err.message);
+                displayError = parsedError.error || err.message;
+            } catch {
+                displayError = err.message;
+            }
+        }
+        setError(displayError);
+        setStep('error');
+        console.error(err);
     } finally {
       setIsLoading(false);
     }
@@ -172,7 +181,7 @@ const App: React.FC = () => {
         return (
           <div className="text-center animate-fade-in-up bg-red-100 dark:bg-red-500/10 border border-red-300 dark:border-red-500/20 p-8 rounded-lg max-w-2xl mx-auto flex flex-col items-center gap-4">
             <h2 className="text-2xl font-bold text-red-700 dark:text-red-300">Произошла ошибка</h2>
-            <p className="text-md text-red-600 dark:text-red-400">{error}</p>
+            <p className="text-md text-red-600 dark:text-red-400">{`Не удалось сгенерировать изображение. ${error}`}</p>
             <button
               onClick={handleStartOver}
               className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg text-md transition-colors"
