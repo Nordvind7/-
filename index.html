@@ -12,7 +12,8 @@
     "react/": "https://esm.sh/react@^19.1.0/",
     "react": "https://esm.sh/react@^19.1.0",
     "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.10.0"
+    "@google/genai": "https://esm.sh/@google/genai@^1.10.0",
+    "@netlify/functions": "https://aistudiocdn.com/@netlify/functions@^4.2.4"
   }
 }
 </script>
@@ -22,6 +23,11 @@
 <style>
 body {
     font-family: 'Inter', sans-serif;
+    background-color: #f3f4f6;
+    transition: background-color 0.3s ease-in-out;
+}
+
+html.dark body {
     background-color: #090A0F;
     background: 
         radial-gradient(ellipse at 20% 80%, rgba(150, 50, 100, 0.25) 0%, rgba(150, 50, 100, 0) 60%),
@@ -63,6 +69,7 @@ body {
 }
 
 #star-bg {
+    display: none; /* Hidden by default */
     position: fixed;
     top: 0;
     left: 0;
@@ -70,6 +77,10 @@ body {
     bottom: 0;
     z-index: -1;
     overflow: hidden;
+}
+
+html.dark #star-bg {
+    display: block; /* Shown only in dark mode */
 }
 
 #stars1, #stars2, #stars3 {

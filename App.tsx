@@ -10,6 +10,7 @@ import Header from './components/Header';
 import Spinner from './components/Spinner';
 import StartScreen from './components/StartScreen';
 import ImageUploader from './components/ImageUploader';
+import ApiKeyHelpScreen from './components/ApiKeyHelpScreen';
 
 const App: React.FC = () => {
   const [personImage, setPersonImage] = useState<File | null>(null);
@@ -17,6 +18,24 @@ const App: React.FC = () => {
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [showApiKeyHelp, setShowApiKeyHelp] = useState<boolean>(false);
+
+  useEffect(() => {
+    const storedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const initialTheme = storedTheme || (prefersDark ? 'dark' : 'light');
+    setTheme(initialTheme);
+  }, []);
+
+  useEffect(() => {
+    if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   const [personImageUrl, setPersonImageUrl] = useState<string | null>(null);
   const [clothingImageUrl, setClothingImageUrl] = useState<string | null>(null);
@@ -59,11 +78,15 @@ const App: React.FC = () => {
     }
     setIsLoading(true);
     setError(null);
+    setShowApiKeyHelp(false);
     setResultImage(null);
     try {
       const result = await generateVirtualTryOn(personImage, clothingImage);
       setResultImage(result);
     } catch (err) {
+      if ((err as any)?.code === 'MISSING_API_KEY') {
+        setShowApiKeyHelp(true);
+      }
       const errorMessage = err instanceof Error ? err.message : 'Произошла неизвестная ошибка.';
       setError(`Не удалось сгенерировать изображение. ${errorMessage}`);
       console.error(err);
@@ -77,6 +100,7 @@ const App: React.FC = () => {
     setClothingImage(null);
     setResultImage(null);
     setError(null);
+    setShowApiKeyHelp(false);
   }, []);
   
   const handleDownload = useCallback(() => {
@@ -91,11 +115,20 @@ const App: React.FC = () => {
   }, [resultImage]);
 
   const renderContent = () => {
+    if (showApiKeyHelp) {
+      return (
+        <ApiKeyHelpScreen onAcknowledge={() => {
+          setShowApiKeyHelp(false);
+          setError(null);
+        }} />
+      );
+    }
+    
     if (error) {
       return (
-        <div className="text-center animate-fade-in bg-red-500/10 border border-red-500/20 p-8 rounded-lg max-w-2xl mx-auto flex flex-col items-center gap-4">
-          <h2 className="text-2xl font-bold text-red-300">Произошла ошибка</h2>
-          <p className="text-md text-red-400">{error}</p>
+        <div className="text-center animate-fade-in bg-red-100 dark:bg-red-500/10 border border-red-300 dark:border-red-500/20 p-8 rounded-lg max-w-2xl mx-auto flex flex-col items-center gap-4">
+          <h2 className="text-2xl font-bold text-red-700 dark:text-red-300">Произошла ошибка</h2>
+          <p className="text-md text-red-600 dark:text-red-400">{error}</p>
           <button
             onClick={() => setError(null)}
             className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg text-md transition-colors"
@@ -130,21 +163,21 @@ const App: React.FC = () => {
         <button
           onClick={handleGenerate}
           disabled={isLoading || !personImage || !clothingImage}
-          className="bg-gradient-to-br from-blue-600 to-blue-500 text-white font-bold py-5 px-12 text-xl rounded-lg transition-all duration-300 ease-in-out shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/40 hover:-translate-y-px active:scale-95 active:shadow-inner disabled:from-blue-800 disabled:to-blue-700 disabled:shadow-none disabled:cursor-not-allowed disabled:transform-none"
+          className="bg-gradient-to-br from-blue-600 to-blue-500 text-white font-bold py-5 px-12 text-xl rounded-lg transition-all duration-300 ease-in-out shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/40 hover:-translate-y-px active:scale-95 active:shadow-inner disabled:from-blue-500 disabled:to-blue-400 dark:disabled:from-blue-800 dark:disabled:to-blue-700 disabled:shadow-none disabled:cursor-not-allowed disabled:transform-none"
         >
           {isLoading ? 'Генерация...' : 'Примерить'}
         </button>
         
-        <div className="w-full h-px bg-gray-700/50 my-4"></div>
+        <div className="w-full h-px bg-gray-200 dark:bg-gray-700/50 my-4"></div>
 
         {(isLoading || resultImage) && (
             <div className="w-full flex flex-col items-center gap-4 animate-fade-in">
-                <h2 className="text-3xl font-bold text-gray-100">Ваша виртуальная примерка</h2>
-                <div className="w-full md:w-1/2 h-[32rem] bg-gray-800/50 border-2 border-gray-700 rounded-lg flex items-center justify-center relative overflow-hidden">
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Ваша виртуальная примерка</h2>
+                <div className="w-full md:w-1/2 h-[32rem] bg-gray-100 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-center relative overflow-hidden">
                     {isLoading && (
                       <div className="flex flex-col items-center gap-4">
                           <Spinner />
-                          <p className="text-gray-300">ИИ-стилист работает...</p>
+                          <p className="text-gray-600 dark:text-gray-300">ИИ-стилист работает...</p>
                       </div>
                     )}
                     {resultImage && !isLoading && (
@@ -161,7 +194,7 @@ const App: React.FC = () => {
                         </button>
                          <button 
                             onClick={handleStartOver}
-                            className="text-center bg-white/10 border border-white/20 text-gray-200 font-semibold py-3 px-6 rounded-md transition-all duration-200 ease-in-out hover:bg-white/20 hover:border-white/30 active:scale-95 text-base"
+                            className="text-center bg-gray-200 hover:bg-gray-300 border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 font-semibold py-3 px-6 rounded-md transition-all duration-200 ease-in-out dark:bg-white/10 dark:hover:bg-white/20 dark:hover:border-white/30 active:scale-95 text-base"
                         >
                             Начать сначала
                         </button>
@@ -174,9 +207,9 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen text-gray-100 flex flex-col">
-      <Header />
-      <main className={`flex-grow w-full max-w-[1600px] mx-auto p-4 md:p-8 flex justify-center ${personImage ? 'items-start' : 'items-center'}`}>
+    <div className="min-h-screen text-gray-900 dark:text-gray-100 flex flex-col">
+      <Header theme={theme} setTheme={setTheme} />
+      <main className={`flex-grow w-full max-w-[1600px] mx-auto p-4 md:p-8 flex justify-center items-center`}>
         {renderContent()}
       </main>
     </div>
