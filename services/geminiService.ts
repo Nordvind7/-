@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+// FIX: Import Modality for use in generateContent config.
+import { GoogleGenAI, GenerateContentResponse, Modality } from "@google/genai";
 
 // Helper function to convert a File object to a Gemini API Part
 const fileToPart = async (file: File): Promise<{ inlineData: { mimeType: string; data: string; } }> => {
@@ -74,7 +75,8 @@ export const generateVirtualTryOn = async (
     clothingImage: File,
 ): Promise<string> => {
     console.log('Начало генерации виртуальной примерки...');
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+    // FIX: API key must be read from process.env.API_KEY.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const personImagePart = await fileToPart(personImage);
     const clothingImagePart = await fileToPart(clothingImage);
@@ -92,9 +94,13 @@ export const generateVirtualTryOn = async (
     const textPart = { text: prompt };
 
     console.log('Отправка изображений и запроса модели...');
+    // FIX: Added config with responseModalities as required for image editing models.
     const response: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image-preview',
         contents: { parts: [personImagePart, clothingImagePart, textPart] },
+        config: {
+            responseModalities: [Modality.IMAGE, Modality.TEXT],
+        },
     });
     console.log('Получен ответ от модели.', response);
 
